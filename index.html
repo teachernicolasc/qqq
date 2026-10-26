@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Misión Planeta Palabras - Ordena las Oraciones</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Fredoka y Quicksand para tipografía infantil de alta legibilidad -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Quicksand:wght@500;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome para íconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%);
+            min-height: 100vh;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .font-kids {
+            font-family: 'Fredoka', cursive;
+        }
+        .word-card {
+            transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+            touch-action: manipulation;
+        }
+        .word-card:active {
+            transform: scale(0.95);
+        }
+        .star-pop {
+            animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes pop {
+            0% { transform: scale(0); opacity: 0; }
+            80% { transform: scale(1.2); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .float-animation {
+            animation: float 3s ease-in-out infinite;
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+        /* Estilos de zonas de caída y oraciones */
+        .drop-zone {
+            min-height: 70px;
+            border: 3px dashed #818cf8;
+            background-color: rgba(255, 255, 255, 0.08);
+        }
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #diploma-card, #diploma-card * {
+                visibility: visible;
+            }
+            #diploma-card {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                color: #0f172a !important;
+            }
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body class="text-white flex flex-col justify-between p-2 md:p-6 overflow-x-hidden min-h-screen">
+
+    <!-- PORTADA Y REGISTRO DE NOMBRE -->
+    <div id="welcome-screen" class="fixed inset-0 bg-slate-950/95 backdrop-blur-lg flex items-center justify-center p-4 z-50">
+        <div class="bg-gradient-to-b from-indigo-900 via-slate-900 to-indigo-950 border-2 border-amber-400/50 rounded-3xl p-6 md:p-10 max-w-lg w-full text-center shadow-2xl relative">
+            <div class="bg-amber-400 text-slate-900 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-4 shadow-xl float-animation text-5xl">
+                <i class="fa-solid fa-user-astronaut"></i>
+            </div>
+            <h1 class="font-kids text-3xl md:text-4xl font-bold text-amber-300 mb-2">Misión Planeta Palabras</h1>
+            <p class="text-indigo-200 text-sm md:text-base mb-6">¡Ordena oraciones, cuenta palabras y conviértete en un Explorador del Espacio!</p>
+
+            <form onsubmit="startGame(event)" class="space-y-4">
+                <div class="text-left">
+                    <label for="student-name" class="block text-xs font-bold text-amber-300 uppercase mb-2 ml-1">Escribe tu nombre:</label>
+                    <input type="text" id="student-name" required placeholder="Ej: Camila, Mateo, Sofia..." class="w-full bg-slate-800/90 border-2 border-indigo-400 focus:border-amber-400 text-white font-kids text-xl px-4 py-3 rounded-2xl outline-none transition-all placeholder:text-indigo-400/50">
+                </div>
+                <button type="submit" class="w-full bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-900 font-kids text-xl font-bold py-3.5 px-6 rounded-2xl shadow-xl transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rocket"></i> ¡Comenzar Misión!
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Encabezado Principal -->
+    <header class="max-w-4xl mx-auto w-full flex justify-between items-center bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20 shadow-lg mb-4">
+        <div class="flex items-center gap-3">
+            <div class="bg-amber-400 p-3 rounded-2xl text-slate-900 text-2xl shadow-md float-animation">
+                <i class="fa-solid fa-user-astronaut"></i>
+            </div>
+            <div>
+                <h1 class="font-kids text-xl md:text-2xl font-bold text-amber-300">Planeta Palabras</h1>
+                <p id="player-display-name" class="text-xs md:text-sm text-indigo-200 font-bold">Explorador Espacial</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-4">
+            <!-- Nivel / Progreso -->
+            <div class="bg-indigo-950/60 px-4 py-2 rounded-xl border border-indigo-400/30 text-center">
+                <span class="text-xs text-indigo-300 font-bold block">ORACIÓN</span>
+                <span id="level-indicator" class="font-kids text-lg md:text-xl text-yellow-400">1 / 30</span>
+            </div>
+
+            <!-- Estrellas -->
+            <div class="bg-indigo-950/60 px-4 py-2 rounded-xl border border-indigo-400/30 flex items-center gap-2">
+                <i class="fa-solid fa-star text-amber-400 text-xl"></i>
+                <span id="score" class="font-kids text-lg md:text-xl text-white">0</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Área Central del Juego -->
+    <main class="max-w-4xl mx-auto w-full flex-1 flex flex-col justify-center">
+
+        <!-- Tarjeta de Desafío -->
+        <div class="bg-slate-900/80 backdrop-blur-md border border-indigo-500/30 rounded-3xl p-4 md:p-6 shadow-2xl relative">
+
+            <!-- Ilustración Pista de la Oración (SVG Dinámico) -->
+            <div class="flex justify-center mb-4">
+                <div class="bg-gradient-to-b from-indigo-800 to-indigo-950 p-4 rounded-2xl border-2 border-indigo-400/40 shadow-inner flex flex-col items-center justify-center w-full max-w-xs h-40 md:h-48 text-center relative overflow-hidden">
+                    <div id="image-container" class="w-28 h-28 md:w-32 md:h-32 flex items-center justify-center">
+                        <!-- SVG generado con JS -->
+                    </div>
+                    <button id="audio-hint-btn" onclick="speakCurrentSentence()" class="absolute bottom-2 right-2 bg-indigo-600 hover:bg-indigo-500 text-white p-2 rounded-full shadow transition-all active:scale-95" title="Escuchar pista">
+                        <i class="fa-solid fa-volume-high text-sm"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- FASE 1: ORDENAR LA ORACIÓN -->
+            <div id="phase-1-container">
+                <p class="text-center text-sm md:text-base text-indigo-200 mb-2 font-medium">
+                    <i class="fa-solid fa-lightbulb text-amber-400 mr-1"></i> Pista: Empieza con <span class="text-amber-300 font-bold">Mayúscula</span> y termina con <span class="text-amber-300 font-bold">Punto (.)</span>
+                </p>
+
+                <!-- Zona de Construcción (Donde se colocan las palabras ordenadas) -->
+                <div id="drop-zone" class="drop-zone rounded-2xl p-3 flex flex-wrap gap-2 md:gap-3 items-center justify-center mb-6 transition-all duration-300">
+                    <span id="placeholder-text" class="text-indigo-300/60 italic text-sm md:text-base">Presiona las palabras abajo en el orden correcto...</span>
+                </div>
+
+                <!-- Banco de Palabras Desordenadas -->
+                <div id="word-bank" class="flex flex-wrap gap-2 md:gap-3 justify-center items-center min-h-[80px] p-2">
+                    <!-- Palabras en desorden -->
+                </div>
+
+                <!-- Botones de Acción Fase 1 -->
+                <div class="flex justify-center gap-3 mt-6">
+                    <button id="reset-btn" onclick="resetCurrentSentence()" class="bg-slate-700 hover:bg-slate-600 text-indigo-200 font-bold py-2.5 px-5 rounded-xl shadow-md transition-all flex items-center gap-2 text-sm md:text-base active:scale-95">
+                        <i class="fa-solid fa-rotate-left"></i> Reiniciar
+                    </button>
+                    <button id="check-btn" onclick="checkSentenceOrder()" class="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-kids text-lg font-bold py-2.5 px-8 rounded-xl shadow-lg transition-all transform active:scale-95 flex items-center gap-2">
+                        <i class="fa-solid fa-circle-check"></i> Revisar
+                    </button>
+                </div>
+            </div>
+
+            <!-- FASE 2: CONTAR PALABRAS (Oculta por defecto) -->
+            <div id="phase-2-container" class="hidden text-center py-4">
+                <div class="bg-emerald-950/60 border border-emerald-500/40 rounded-2xl p-4 mb-6">
+                    <p class="text-emerald-300 text-sm md:text-base font-bold mb-2">¡Excelente! Has ordenado la oración:</p>
+                    <p id="completed-sentence-display" class="font-kids text-xl md:text-2xl text-white bg-slate-800/80 py-3 px-4 rounded-xl border border-emerald-500/30 shadow-inner">
+                        <!-- Oración completa aquí -->
+                    </p>
+                </div>
+
+                <h2 class="font-kids text-lg md:text-2xl text-amber-300 mb-4">
+                    <i class="fa-solid fa-calculator text-amber-400 mr-2"></i>¿Cuántas palabras tiene esta oración?
+                </h2>
+
+                <!-- Opciones numéricas -->
+                <div id="count-options" class="flex flex-wrap justify-center gap-3 md:gap-4 mb-4">
+                    <!-- Botones de conteo 3, 4, 5, 6, 7 -->
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <!-- Modal de Feedback Positivo / Felicitaciones -->
+    <div id="feedback-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden">
+        <div class="bg-gradient-to-b from-indigo-900 to-slate-900 border-2 border-amber-400 rounded-3xl p-6 md:p-8 max-w-sm w-full text-center shadow-2xl relative star-pop">
+            <div class="w-20 h-20 bg-amber-400 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg text-slate-900 text-4xl">
+                <i class="fa-solid fa-trophy"></i>
+            </div>
+            <h3 id="modal-title" class="font-kids text-2xl md:text-3xl font-bold text-amber-300 mb-2">¡Grandioso!</h3>
+            <p id="modal-message" class="text-indigo-100 text-sm md:text-base mb-6">¡Has completado la oración y contado correctamente!</p>
+            <button onclick="nextSentence()" class="w-full bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 text-slate-900 font-kids text-lg font-bold py-3 px-6 rounded-2xl shadow-lg transition-all transform active:scale-95">
+                ¡Siguiente Oración! <i class="fa-solid fa-arrow-right ml-1"></i>
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal Final de Juego Completado -->
+    <div id="game-over-modal" class="fixed inset-0 bg-slate-950/90 backdrop-blur-md flex items-center justify-center p-4 z-50 hidden overflow-y-auto">
+        <div id="diploma-card" class="bg-gradient-to-b from-slate-900 via-indigo-950 to-slate-900 border-4 border-amber-400 rounded-3xl p-6 md:p-8 max-w-2xl w-full text-center shadow-2xl relative my-auto">
+            
+            <!-- Adornos Diploma -->
+            <div class="flex justify-between items-center mb-2">
+                <i class="fa-solid fa-star text-amber-400 text-2xl"></i>
+                <span class="text-xs font-bold text-amber-400 uppercase tracking-widest">Planeta Palabras 2° Básico</span>
+                <i class="fa-solid fa-star text-amber-400 text-2xl"></i>
+            </div>
+
+            <div class="text-5xl text-amber-400 mb-2 float-animation">
+                <i class="fa-solid fa-award"></i>
+            </div>
+            
+            <h2 class="font-kids text-2xl md:text-4xl font-bold text-amber-300 mb-1">DIPLOMA DE HONOR</h2>
+            <p class="text-indigo-200 text-sm md:text-base italic mb-4">Se otorga con orgullo el presente reconocimiento a:</p>
+            
+            <h3 id="diploma-student-name" class="font-kids text-3xl md:text-4xl text-amber-400 underline decoration-amber-500/50 my-2">Estudiante</h3>
+            
+            <p class="text-indigo-100 text-sm md:text-base max-w-lg mx-auto mb-6">
+                Por haber completado con éxito la <strong class="text-amber-300">Misión de Lectoescritura</strong>, ordenando correctamente las 30 oraciones y contando sus palabras con gran destreza.
+            </p>
+            
+            <div class="bg-indigo-950/80 rounded-2xl p-4 mb-6 border border-indigo-500/30 flex justify-around max-w-md mx-auto">
+                <div>
+                    <span class="block text-xs text-indigo-300 font-bold">ORACIONES</span>
+                    <span class="font-kids text-xl md:text-2xl text-white">30 / 30</span>
+                </div>
+                <div class="border-r border-indigo-800"></div>
+                <div>
+                    <span class="block text-xs text-indigo-300 font-bold">RESPUESTAS CORRECTAS</span>
+                    <span id="final-correct-count" class="font-kids text-xl md:text-2xl text-emerald-400">30/30</span>
+                </div>
+                <div class="border-r border-indigo-800"></div>
+                <div>
+                    <span class="block text-xs text-indigo-300 font-bold">PUNTAJE FINAL</span>
+                    <span id="final-score" class="font-kids text-xl md:text-2xl text-amber-400">0 pts</span>
+                </div>
+            </div>
+
+            <div class="flex flex-col sm:flex-row justify-center gap-3 no-print">
+                <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-kids text-lg font-bold py-3 px-6 rounded-2xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-print"></i> Imprimir Diploma
+                </button>
+                <button onclick="restartGame()" class="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-kids text-lg font-bold py-3 px-6 rounded-2xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-rotate-right"></i> Jugar de Nuevo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Mensaje Flotante de Error (Toast) -->
+    <div id="toast" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-2xl font-bold text-sm md:text-base shadow-2xl transition-all duration-300 transform translate-y-20 opacity-0 pointer-events-none z-50 flex items-center gap-2 border border-red-400">
+        <i class="fa-solid fa-circle-exclamation text-xl"></i>
+        <span id="toast-message">Inténtalo de nuevo.</span>
+    </div>
+
+    <!-- Pie de página -->
+    <footer class="max-w-4xl mx-auto w-full text-center py-2 text-xs text-indigo-300/60 font-medium">
+        Recurso Educativo Digital - Lectoescritura 2° Básico
+    </footer>
+
+    <script>
+        /* ==========================================================================
+           BANCO DE DATOS DE ORACIONES Y GRAFICOS SVG (30 Oraciones para 2° Básico)
+           ========================================================================== */
+        const sentencesData = [
+            {
+                words: ["El", "perro", "corre", "rápido."],
+                correct: "El perro corre rápido.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="50" r="40" fill="#f59e0b"/><path d="M30 40 Q20 20 40 30 Q50 20 60 30 Q80 20 70 40 Q85 55 70 70 Q50 85 30 70 Q15 55 30 40 Z" fill="#d97706"/><circle cx="40" cy="45" r="4" fill="#000"/><circle cx="60" cy="45" r="4" fill="#000"/><ellipse cx="50" cy="55" rx="6" ry="4" fill="#000"/><path d="M45 62 Q50 68 55 62" stroke="#000" stroke-width="2" fill="none"/></svg>`
+            },
+            {
+                words: ["La", "gata", "toma", "leche."],
+                correct: "La gata toma leche.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="50" r="40" fill="#94a3b8"/><polygon points="25,35 15,10 40,25" fill="#64748b"/><polygon points="75,35 85,10 60,25" fill="#64748b"/><circle cx="38" cy="45" r="4" fill="#000"/><circle cx="62" cy="45" r="4" fill="#000"/><polygon points="50,52 45,58 55,58" fill="#f43f5e"/><path d="M30 55 L15 52 M30 60 L10 62 M70 55 L85 52 M70 60 L90 62" stroke="#fff" stroke-width="2"/></svg>`
+            },
+            {
+                words: ["El", "sol", "brilla", "hoy."],
+                correct: "El sol brilla hoy.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="50" r="24" fill="#fbbf24"/><path d="M50 10 L50 20 M50 80 L50 90 M10 50 L20 50 M80 50 L90 50 M22 22 L29 29 M71 71 L78 78 M22 78 L29 71 M71 29 L78 22" stroke="#fbbf24" stroke-width="6" stroke-linecap="round"/><circle cx="43" cy="45" r="3" fill="#000"/><circle cx="57" cy="45" r="3" fill="#000"/><path d="M43 55 Q50 62 57 55" stroke="#000" stroke-width="2" fill="none"/></svg>`
+            },
+            {
+                words: ["Los", "niños", "juegan", "felizmente."],
+                correct: "Los niños juegan felizmente.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="35" r="18" fill="#fde047"/><path d="M32 75 Q50 50 68 75" fill="#38bdf8"/><circle cx="43" cy="32" r="2.5" fill="#000"/><circle cx="57" cy="32" r="2.5" fill="#000"/><path d="M42 42 Q50 48 58 42" stroke="#000" stroke-width="2" fill="none"/><path d="M20 30 Q25 15 50 15 Q75 15 80 30" fill="#854d0e"/></svg>`
+            },
+            {
+                words: ["Un", "pájaro", "canta", "en", "el", "árbol."],
+                correct: "Un pájaro canta en el árbol.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="44" y="50" width="12" height="40" fill="#78350f"/><circle cx="50" cy="38" r="28" fill="#22c55e"/><path d="M35 45 Q45 35 55 40 Q60 30 50 25" fill="#3b82f6"/><polygon points="60,38 72,40 60,44" fill="#f97316"/><circle cx="52" cy="36" r="2" fill="#000"/></svg>`
+            },
+            {
+                words: ["La", "mariposa", "es", "muy", "bonita."],
+                correct: "La mariposa es muy bonita.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M50 50 Q20 10 15 35 Q10 60 50 55" fill="#ec4899"/><path d="M50 50 Q80 10 85 35 Q90 60 50 55" fill="#ec4899"/><path d="M50 55 Q25 60 25 75 Q35 90 50 60" fill="#a855f7"/><path d="M50 55 Q75 60 75 75 Q65 90 50 60" fill="#a855f7"/><ellipse cx="50" cy="50" rx="4" ry="22" fill="#1e293b"/></svg>`
+            },
+            {
+                words: ["Mi", "mamá", "cocina", "una", "sopa."],
+                correct: "Mi mamá cocina una sopa.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M20 50 Q20 80 50 80 Q80 80 80 50 Z" fill="#94a3b8"/><rect x="15" y="45" width="70" height="8" rx="3" fill="#64748b"/><path d="M35 35 Q40 25 35 15 M50 35 Q55 25 50 15 M65 35 Q70 25 65 15" stroke="#cbd5e1" stroke-width="3" stroke-linecap="round" fill="none"/></svg>`
+            },
+            {
+                words: ["El", "auto", "azul", "es", "nuevo."],
+                correct: "El auto azul es nuevo.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M15 60 L25 40 L65 40 L85 60 Z" fill="#2563eb"/><rect x="10" y="55" width="80" height="18" rx="5" fill="#3b82f6"/><circle cx="30" cy="73" r="10" fill="#1e293b"/><circle cx="30" cy="73" r="4" fill="#94a3b8"/><circle cx="70" cy="73" r="10" fill="#1e293b"/><circle cx="70" cy="73" r="4" fill="#94a3b8"/></svg>`
+            },
+            {
+                words: ["La", "flor", "roja", "tiene", "hojas."],
+                correct: "La flor roja tiene hojas.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="47" y="50" width="6" height="40" fill="#16a34a"/><path d="M50 70 Q30 60 30 70 Q40 80 50 75" fill="#22c55e"/><circle cx="50" cy="35" r="12" fill="#ef4444"/><circle cx="38" cy="35" r="10" fill="#f87171"/><circle cx="62" cy="35" r="10" fill="#f87171"/><circle cx="50" cy="23" r="10" fill="#f87171"/><circle cx="50" cy="47" r="10" fill="#f87171"/><circle cx="50" cy="35" r="8" fill="#facc15"/></svg>`
+            },
+            {
+                words: ["El", "conejo", "salta", "en", "el", "pasto."],
+                correct: "El conejo salta en el pasto.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="50" cy="65" rx="22" ry="18" fill="#e2e8f0"/><circle cx="50" cy="42" r="14" fill="#e2e8f0"/><ellipse cx="43" cy="20" rx="4" ry="14" fill="#e2e8f0"/><ellipse cx="57" cy="20" rx="4" ry="14" fill="#e2e8f0"/><ellipse cx="43" cy="20" rx="2" ry="10" fill="#f472b6"/><ellipse cx="57" cy="20" rx="2" ry="10" fill="#f472b6"/><circle cx="45" cy="40" r="2" fill="#000"/><circle cx="55" cy="40" r="2" fill="#000"/></svg>`
+            },
+            {
+                words: ["Me", "gusta", "comer", "manzana", "dulce."],
+                correct: "Me gusta comer manzana dulce.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M50 30 Q30 15 20 40 Q10 70 50 85 Q90 70 80 40 Q70 15 50 30 Z" fill="#dc2626"/><path d="M50 28 Q55 15 60 10" stroke="#78350f" stroke-width="3" fill="none"/><path d="M52 22 Q65 18 70 25 Q60 30 52 22" fill="#16a34a"/></svg>`
+            },
+            {
+                words: ["El", "barco", "navega", "en", "el", "mar."],
+                correct: "El barco navega en el mar.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M20 60 L80 60 L70 80 L30 80 Z" fill="#b45309"/><polygon points="48,15 48,55 80,55" fill="#f8fafc"/><rect x="45" y="10" width="4" height="50" fill="#475569"/><path d="M0 75 Q25 65 50 75 T100 75 L100 100 L0 100 Z" fill="#0284c7"/></svg>`
+            },
+            {
+                words: ["La", "luna", "brilla", "de", "noche."],
+                correct: "La luna brilla de noche.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M60 20 A30 30 0 1 0 80 70 A35 35 0 1 1 60 20 Z" fill="#fde047"/><circle cx="25" cy="25" r="2" fill="#fff"/><circle cx="75" cy="15" r="3" fill="#fff"/><circle cx="85" cy="45" r="2" fill="#fff"/></svg>`
+            },
+            {
+                words: ["El", "gato", "duerme", "en", "la", "cama."],
+                correct: "El gato duerme en la cama.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="10" y="50" width="80" height="30" rx="5" fill="#6366f1"/><rect x="15" y="40" width="30" height="15" rx="4" fill="#ffffff"/><circle cx="55" cy="50" r="14" fill="#f97316"/><polygon points="45,40 42,28 52,38" fill="#f97316"/><polygon points="65,40 68,28 58,38" fill="#f97316"/></svg>`
+            },
+            {
+                words: ["La", "escuela", "es", "muy", "divertida."],
+                correct: "La escuela es muy divertida.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><polygon points="50,15 10,40 90,40" fill="#dc2626"/><rect x="20" y="40" width="60" height="45" fill="#f1f5f9"/><rect x="42" y="55" width="16" height="30" fill="#b45309"/><rect x="28" y="50" width="10" height="12" fill="#38bdf8"/><rect x="62" y="50" width="10" height="12" fill="#38bdf8"/></svg>`
+            },
+            {
+                words: ["El", "pez", "nada", "en", "el", "agua."],
+                correct: "El pez nada en el agua.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="45" cy="50" rx="25" ry="18" fill="#f97316"/><polygon points="65,50 85,35 85,65" fill="#f97316"/><circle cx="32" cy="45" r="3" fill="#000"/><path d="M0 80 Q25 70 50 80 T100 80 L100 100 L0 100 Z" fill="#38bdf8" opacity="0.5"/></svg>`
+            },
+            {
+                words: ["Mi", "amigo", "tiene", "un", "pelota."],
+                correct: "Mi amigo tiene un pelota.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="50" r="35" fill="#ef4444"/><path d="M15 50 A35 35 0 0 0 85 50 Z" fill="#3b82f6"/><path d="M50 15 A35 35 0 0 0 50 85 Z" fill="#facc15"/></svg>`
+            },
+            {
+                words: ["La", "abeja", "hace", "miel", "rica."],
+                correct: "La abeja hace miel rica.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="50" cy="50" rx="22" ry="16" fill="#facc15"/><rect x="42" y="34" width="4" height="32" fill="#000"/><rect x="52" y="34" width="4" height="32" fill="#000"/><circle cx="32" cy="48" r="6" fill="#000"/><ellipse cx="45" cy="28" rx="8" ry="14" fill="#e0f2fe" opacity="0.8"/><ellipse cx="55" cy="28" rx="8" ry="14" fill="#e0f2fe" opacity="0.8"/></svg>`
+            },
+            {
+                words: ["El", "estudiante", "lee", "un", "libro."],
+                correct: "El estudiante lee un libro.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M20 30 Q50 20 50 40 L50 80 Q50 60 20 65 Z" fill="#f8fafc"/><path d="M80 30 Q50 20 50 40 L50 80 Q50 60 80 65 Z" fill="#e2e8f0"/><path d="M15 35 Q50 25 50 45 L50 85 Q50 65 15 70 Z" fill="#38bdf8"/><path d="M85 35 Q50 25 50 45 L50 85 Q50 65 85 70 Z" fill="#0284c7"/></svg>`
+            },
+            {
+                words: ["Las", "estrellas", "brillan", "en", "el", "cielo."],
+                correct: "Las estrellas brillan en el cielo.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><polygon points="50,10 62,38 90,38 67,55 76,82 50,65 24,82 33,55 10,38 38,38" fill="#facc15"/><polygon points="20,15 24,26 35,26 26,33 29,43 20,37 11,43 14,33 5,26 16,26" fill="#fde047"/></svg>`
+            },
+            // NUEVOS 10 EJERCICIOS (21 A 30)
+            {
+                words: ["El", "león", "ruge", "muy", "fuerte."],
+                correct: "El león ruge muy fuerte.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="50" r="38" fill="#d97706"/><circle cx="50" cy="50" r="26" fill="#f59e0b"/><circle cx="42" cy="45" r="3" fill="#000"/><circle cx="58" cy="45" r="3" fill="#000"/><polygon points="50,52 45,58 55,58" fill="#78350f"/><path d="M44 64 Q50 70 56 64" stroke="#000" stroke-width="2" fill="none"/></svg>`
+            },
+            {
+                words: ["La", "niña", "dibuja", "un", "lindo", "sol."],
+                correct: "La niña dibuja un lindo sol.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="35" r="16" fill="#fde047"/><path d="M30 75 Q50 50 70 75" fill="#ec4899"/><rect x="46" y="60" width="8" height="25" fill="#f97316" transform="rotate(30 50 60)"/></svg>`
+            },
+            {
+                words: ["El", "tren", "camina", "por", "las", "vías."],
+                correct: "El tren camina por las vías.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><rect x="15" y="35" width="70" height="35" rx="5" fill="#ef4444"/><rect x="25" y="42" width="15" height="12" fill="#38bdf8"/><rect x="48" y="42" width="15" height="12" fill="#38bdf8"/><circle cx="30" cy="73" r="8" fill="#1e293b"/><circle cx="70" cy="73" r="8" fill="#1e293b"/></svg>`
+            },
+            {
+                words: ["La", "vaca", "da", "mucha", "leche."],
+                correct: "La vaca da mucha leche.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="50" cy="50" rx="30" ry="22" fill="#fff"/><circle cx="40" cy="45" r="8" fill="#000"/><circle cx="62" cy="52" r="6" fill="#000"/><ellipse cx="50" cy="60" rx="14" ry="8" fill="#f472b6"/><circle cx="43" cy="40" r="2" fill="#000"/><circle cx="57" cy="40" r="2" fill="#000"/></svg>`
+            },
+            {
+                words: ["El", "globo", "rojo", "vuela", "alto."],
+                correct: "El globo rojo vuela alto.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="50" cy="40" rx="22" ry="28" fill="#ef4444"/><polygon points="47,68 53,68 50,72" fill="#dc2626"/><path d="M50 72 Q45 82 52 92" stroke="#fff" stroke-width="2" fill="none"/></svg>`
+            },
+            {
+                words: ["Mi", "hermano", "lee", "un", "cuento."],
+                correct: "Mi hermano lee un cuento.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="30" r="14" fill="#fde047"/><path d="M25 45 Q50 35 50 55 L50 85 Q50 65 25 70 Z" fill="#38bdf8"/><path d="M75 45 Q50 35 50 55 L50 85 Q50 65 75 70 Z" fill="#0284c7"/></svg>`
+            },
+            {
+                words: ["La", "gallina", "pone", "un", "huevo."],
+                correct: "La gallina pone un huevo.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="50" cy="55" rx="25" ry="20" fill="#f97316"/><path d="M30 45 Q35 25 50 35" fill="#f97316"/><polygon points="25,38 15,40 25,45" fill="#facc15"/><ellipse cx="70" cy="65" rx="8" ry="11" fill="#fff"/></svg>`
+            },
+            {
+                words: ["El", "pato", "nada", "en", "la", "laguna."],
+                correct: "El pato nada en la laguna.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><ellipse cx="50" cy="58" rx="22" ry="16" fill="#facc15"/><circle cx="35" cy="42" r="12" fill="#facc15"/><polygon points="28,42 16,45 28,48" fill="#f97316"/><path d="M0 75 Q25 65 50 75 T100 75 L100 100 L0 100 Z" fill="#38bdf8" opacity="0.6"/></svg>`
+            },
+            {
+                words: ["La", "manzana", "es", "una", "fruta", "sana."],
+                correct: "La manzana es una fruta sana.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><path d="M50 30 Q30 15 20 40 Q10 70 50 85 Q90 70 80 40 Q70 15 50 30 Z" fill="#22c55e"/><path d="M50 28 Q55 15 60 10" stroke="#78350f" stroke-width="3" fill="none"/></svg>`
+            },
+            {
+                words: ["Los", "niños", "cuidan", "el", "medio", "ambiente."],
+                correct: "Los niños cuidan el medio ambiente.",
+                icon: `<svg viewBox="0 0 100 100" class="w-full h-full"><circle cx="50" cy="50" r="35" fill="#0284c7"/><path d="M30 35 Q40 25 55 35 Q65 50 50 65 Q35 70 30 50 Z" fill="#22c55e"/><path d="M60 60 Q75 55 80 65 Q70 80 55 75 Z" fill="#16a34a"/></svg>`
+            }
+        ];
+
+        /* ==========================================================================
+           VARIABLES DE ESTADO DEL JUEGO
+           ========================================================================== */
+        let currentIndex = 0;
+        let score = 0;
+        let studentName = "";
+        let correctAttemptsCount = 0;
+        let currentConstructedWords = [];
+        let availableWords = [];
+
+        // Elementos DOM
+        const welcomeScreen = document.getElementById('welcome-screen');
+        const playerDisplayName = document.getElementById('player-display-name');
+        const levelIndicator = document.getElementById('level-indicator');
+        const scoreDisplay = document.getElementById('score');
+        const imageContainer = document.getElementById('image-container');
+        const dropZone = document.getElementById('drop-zone');
+        const wordBank = document.getElementById('word-bank');
+        const placeholderText = document.getElementById('placeholder-text');
+        
+        const phase1Container = document.getElementById('phase-1-container');
+        const phase2Container = document.getElementById('phase-2-container');
+        const completedSentenceDisplay = document.getElementById('completed-sentence-display');
+        const countOptions = document.getElementById('count-options');
+        
+        const feedbackModal = document.getElementById('feedback-modal');
+        const gameOverModal = document.getElementById('game-over-modal');
+
+        /* ==========================================================================
+           INICIALIZACIÓN Y CARGA DE NIVELES
+           ========================================================================== */
+        function startGame(e) {
+            e.preventDefault();
+            const input = document.getElementById('student-name');
+            studentName = input.value.trim() || "Explorador";
+            playerDisplayName.innerText = `Explorador: ${studentName}`;
+            welcomeScreen.classList.add('hidden');
+            loadSentence(currentIndex);
+        }
+
+        function loadSentence(index) {
+            // Limpiar vistas y estados
+            phase1Container.classList.remove('hidden');
+            phase2Container.classList.add('hidden');
+            feedbackModal.classList.add('hidden');
+            
+            currentConstructedWords = [];
+            const sentenceData = sentencesData[index];
+
+            // Actualizar indicadores
+            levelIndicator.innerText = `${index + 1} / ${sentencesData.length}`;
+            imageContainer.innerHTML = sentenceData.icon;
+
+            // Desordenar palabras (Asegurando que no queden en orden original por azar)
+            availableWords = [...sentenceData.words];
+            do {
+                availableWords.sort(() => Math.random() - 0.5);
+            } while (availableWords.join(' ') === sentenceData.correct && availableWords.length > 2);
+
+            renderWordBank();
+            renderDropZone();
+        }
+
+        /* ==========================================================================
+           LÓGICA FASE 1: ORDENAR LA ORACIÓN
+           ========================================================================== */
+        function renderWordBank() {
+            wordBank.innerHTML = '';
+            availableWords.forEach((word, idx) => {
+                const btn = document.createElement('button');
+                btn.className = "word-card bg-indigo-600 hover:bg-indigo-500 text-white font-kids text-lg md:text-xl px-4 py-2 rounded-2xl shadow-md border-b-4 border-indigo-800 flex items-center gap-1 active:translate-y-1";
+                btn.innerText = word;
+                btn.onclick = () => selectWord(word, idx);
+                wordBank.appendChild(btn);
+            });
+        }
+
+        function renderDropZone() {
+            // Mantener solo el placeholder si está vacío
+            dropZone.innerHTML = '';
+            
+            if (currentConstructedWords.length === 0) {
+                dropZone.appendChild(placeholderText);
+                placeholderText.classList.remove('hidden');
+                return;
+            }
+
+            currentConstructedWords.forEach((word, idx) => {
+                const card = document.createElement('div');
+                card.className = "word-card bg-amber-400 hover:bg-amber-300 text-slate-900 font-kids text-lg md:text-xl px-4 py-2 rounded-2xl shadow-md border-b-4 border-amber-600 cursor-pointer flex items-center gap-2 animate-pop";
+                card.innerHTML = `<span>${word}</span> <i class="fa-solid fa-xmark text-xs opacity-60"></i>`;
+                card.onclick = () => deselectWord(word, idx);
+                dropZone.appendChild(card);
+            });
+        }
+
+        function selectWord(word, index) {
+            // Mueve la palabra del banco a la zona de construcción
+            currentConstructedWords.push(word);
+            availableWords.splice(index, 1);
+            
+            // Efecto de sonido suave (Web Audio API)
+            playPopSound(400);
+
+            renderWordBank();
+            renderDropZone();
+        }
+
+        function deselectWord(word, index) {
+            // Devuelve la palabra al banco
+            availableWords.push(word);
+            currentConstructedWords.splice(index, 1);
+
+            playPopSound(300);
+
+            renderWordBank();
+            renderDropZone();
+        }
+
+        function resetCurrentSentence() {
+            loadSentence(currentIndex);
+        }
+
+        function checkSentenceOrder() {
+            const currentText = currentConstructedWords.join(' ');
+            const targetText = sentencesData[currentIndex].correct;
+
+            if (currentText === targetText) {
+                // ¡Acierto en Fase 1!
+                playSuccessSound();
+                score += 5;
+                correctAttemptsCount++;
+                scoreDisplay.innerText = score;
+                
+                // Transición a Fase 2: Contar Palabras
+                setTimeout(() => {
+                    startPhase2();
+                }, 400);
+
+            } else {
+                // Error en Fase 1
+                playErrorSound();
+                showToast("¡Casi! Revisa que empiece con Mayúscula y termine con Punto.");
+                
+                // Efecto visual de error
+                dropZone.classList.add('border-red-500', 'bg-red-500/10');
+                setTimeout(() => {
+                    dropZone.classList.remove('border-red-500', 'bg-red-500/10');
+                }, 800);
+            }
+        }
+
+        /* ==========================================================================
+           LÓGICA FASE 2: CONTAR LAS PALABRAS
+           ========================================================================== */
+        function startPhase2() {
+            phase1Container.classList.add('hidden');
+            phase2Container.classList.remove('hidden');
+
+            const currentSentence = sentencesData[currentIndex].correct;
+            completedSentenceDisplay.innerText = currentSentence;
+
+            // Generar opciones numéricas (3, 4, 5, 6, 7)
+            countOptions.innerHTML = '';
+            const correctCount = sentencesData[currentIndex].words.length;
+
+            // Opciones del 3 al 7 para asegurar opciones adecuadas
+            for (let i = 3; i <= 7; i++) {
+                const btn = document.createElement('button');
+                btn.className = "w-14 h-14 md:w-16 md:h-16 bg-gradient-to-b from-indigo-500 to-indigo-700 hover:from-amber-400 hover:to-amber-500 hover:text-slate-900 text-white font-kids text-2xl md:text-3xl rounded-2xl shadow-lg border-b-4 border-indigo-900 transition-all transform active:scale-90 flex items-center justify-center";
+                btn.innerText = i;
+                btn.onclick = () => checkWordCount(i, correctCount);
+                countOptions.appendChild(btn);
+            }
+        }
+
+        function checkWordCount(selectedCount, correctCount) {
+            if (selectedCount === correctCount) {
+                // ¡Acierto total de la oración!
+                playSuccessSound();
+                score += 5;
+                scoreDisplay.innerText = score;
+
+                // Mostrar Modal de Éxito
+                document.getElementById('modal-title').innerText = "¡Excelente Trabajo!";
+                document.getElementById('modal-message').innerText = `¡Correcto! La oración tiene ${correctCount} palabras.`;
+                feedbackModal.classList.remove('hidden');
+
+            } else {
+                // Error al contar
+                playErrorSound();
+                showToast(`¡Cuenta bien! Toca o señala cada palabra una por una.`);
+            }
+        }
+
+        /* ==========================================================================
+           AVANCE DE NIVELES Y NAVEGACIÓN
+           ========================================================================== */
+        function nextSentence() {
+            feedbackModal.classList.add('hidden');
+            currentIndex++;
+
+            if (currentIndex < sentencesData.length) {
+                loadSentence(currentIndex);
+            } else {
+                // Fin del juego - Desplegar Diploma
+                document.getElementById('diploma-student-name').innerText = studentName;
+                document.getElementById('final-score').innerText = `${score} pts`;
+                document.getElementById('final-correct-count').innerText = `${correctAttemptsCount}/${sentencesData.length}`;
+                gameOverModal.classList.remove('hidden');
+            }
+        }
+
+        function restartGame() {
+            currentIndex = 0;
+            score = 0;
+            correctAttemptsCount = 0;
+            scoreDisplay.innerText = score;
+            gameOverModal.classList.add('hidden');
+            welcomeScreen.classList.remove('hidden');
+        }
+
+        /* ==========================================================================
+           ACCESIBILIDAD / SÍNTESIS DE VOZ (AUDIO LECTURA)
+           ========================================================================== */
+        function speakCurrentSentence() {
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.cancel(); // Detener audios previos
+                const text = sentencesData[currentIndex].correct;
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'es-ES';
+                utterance.rate = 0.85; // Velocidad pausada ideal para niños
+                window.speechSynthesis.speak(utterance);
+            } else {
+                showToast("Pista: Lee atentamente la oración visual.");
+            }
+        }
+
+        /* ==========================================================================
+           EFECTOS DE SONIDO SINTETIZADOS (Sin dependencias externas)
+           ========================================================================== */
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playPopSound(freq) {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(freq * 1.5, audioCtx.currentTime + 0.08);
+            gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+            gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.08);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.08);
+        }
+
+        function playSuccessSound() {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const now = audioCtx.currentTime;
+            const notes = [261.63, 329.63, 392.00, 523.25]; // C4, E4, G4, C5
+            notes.forEach((freq, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now + i * 0.08);
+                gain.gain.setValueAtTime(0.3, now + i * 0.08);
+                gain.gain.linearRampToValueAtTime(0, now + i * 0.08 + 0.15);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(now + i * 0.08);
+                osc.stop(now + i * 0.08 + 0.15);
+            });
+        }
+
+        function playErrorSound() {
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const now = audioCtx.currentTime;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(180, now);
+            osc.frequency.linearRampToValueAtTime(110, now + 0.25);
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.25);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now);
+            osc.stop(now + 0.25);
+        }
+
+        /* ==========================================================================
+           SISTEMA DE NOTIFICACIONES (TOAST)
+           ========================================================================== */
+        function showToast(message) {
+            const toast = document.getElementById('toast');
+            const toastMessage = document.getElementById('toast-message');
+            toastMessage.innerText = message;
+            
+            toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
